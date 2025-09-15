@@ -1,0 +1,262 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Multi-tenant architecture with tenant isolation
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String
+  shopifyDomain String @unique // e.g., "mystore.myshopify.com"
+  shopifyAccessToken String? // Encrypted access token
+  apiKey      String?  // For webhook verification
+  apiSecret   String?  // For webhook verification
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  stores      Store[]
+  customers   Customer[]
+  products    Product[]
+  orders      Order[]
+  events      CustomEvent[]
+
+  @@map("tenants")
+}
+
+model Store {
+  id          String   @id @default(cuid())
+  tenantId    String
+  shopifyId   String   @unique
+  name        String
+  email       String?
+  domain      String
+  currency    String   @default("INR")
+  timezone    String?
+  country     String?
+  province    String?
+  address1    String?
+  address2    String?
+  city        String?
+  zip         String?
+  phone       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("stores")
+}
+
+model Customer {
+  id              String   @id @default(cuid())
+  tenantId        String
+  shopifyId       String
+  email           String?
+  firstName       String?
+  lastName        String?
+  phone           String?
+  acceptsMarketing Boolean @default(false)
+  totalSpent      Float    @default(0)
+  ordersCount     Int      @default(0)
+  state           String?  // enabled, disabled, invited, declined
+  tags            String?   // Comma-separated tags
+  lastOrderDate   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders          Order[]
+  addresses       CustomerAddress[]
+
+  @@unique([tenantId, shopifyId])
+  @@map("customers")
+}
+
+model CustomerAddress {
+  id          String   @id @default(cuid())
+  customerId  String
+  firstName   String?
+  lastName    String?
+  company     String?
+  address1    String?
+  address2    String?
+  city        String?
+  province    String?
+  country     String?
+  zip         String?
+  phone       String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_addresses")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  tenantId    String
+  shopifyId   String
+  title       String
+  handle      String?
+  description String?
+  vendor      String?
+  productType String?
+  status      String   @default("active") // active, archived, draft
+  tags        String?  // Comma-separated tags
+  images      String?  // JSON string of image objects
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  variants    ProductVariant[]
+  orderItems  OrderLineItem[]
+
+  @@unique([tenantId, shopifyId])
+  @@map("products")
+}
+
+model ProductVariant {
+  id              String   @id @default(cuid())
+  productId       String
+  shopifyId       String
+  title           String
+  price           Float
+  compareAtPrice  Float?
+  sku             String?
+  barcode         String?
+  inventoryQuantity Int?
+  weight          Float?
+  weightUnit      String?  @default("kg")
+  requiresShipping Boolean @default(true)
+  taxable         Boolean  @default(true)
+  position        Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  product         Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems      OrderLineItem[]
+
+  @@unique([productId, shopifyId])
+  @@map("product_variants")
+}
+
+model Order {
+  id                String   @id @default(cuid())
+  tenantId          String
+  shopifyId         String
+  customerId        String?
+  orderNumber       String
+  email             String?
+  totalPrice        Float
+  subtotalPrice     Float
+  totalTax          Float
+  totalDiscounts    Float
+  currency          String   @default("INR")
+  financialStatus   String?  // pending, authorized, partially_paid, paid, etc.
+  fulfillmentStatus String?  // fulfilled, partial, unfulfilled
+  tags              String?  // Comma-separated tags
+  note              String?
+  shippingAddress   String?  // JSON string of shipping address object
+  billingAddress    String?  // JSON string of billing address object
+  processedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  tenant            Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer          Customer? @relation(fields: [customerId], references: [id])
+  lineItems         OrderLineItem[]
+
+  @@unique([tenantId, shopifyId])
+  @@map("orders")
+}
+
+model OrderLineItem {
+  id              String   @id @default(cuid())
+  orderId         String
+  productId       String?
+  variantId       String?
+  shopifyId       String
+  title           String
+  quantity        Int
+  price           Float
+  totalDiscount   Float    @default(0)
+  sku             String?
+  vendor          String?
+  productExists   Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  order           Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product? @relation(fields: [productId], references: [id])
+  variant         ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@map("order_line_items")
+}
+
+// Custom events for tracking user behavior
+model CustomEvent {
+  id          String   @id @default(cuid())
+  tenantId    String
+  customerId  String?
+  sessionId   String?
+  eventType   String   // cart_abandoned, checkout_started, product_viewed, etc.
+  eventData   String?  // JSON string of additional event data
+  timestamp   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  // Relations
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("custom_events")
+}
+
+// Webhook logs for debugging and monitoring
+model WebhookLog {
+  id          String   @id @default(cuid())
+  tenantId    String?
+  topic       String   // orders/create, customers/update, etc.
+  shopifyId   String?  // ID of the resource from Shopify
+  payload     String   // JSON string of full webhook payload
+  processed   Boolean  @default(false)
+  error       String?  // Error message if processing failed
+  createdAt   DateTime @default(now())
+  processedAt DateTime?
+
+  @@map("webhook_logs")
+}
+
+// Data sync jobs for tracking ingestion status
+model SyncJob {
+  id          String   @id @default(cuid())
+  tenantId    String
+  jobType     String   // full_sync, incremental_sync, webhook_sync
+  status      String   @default("pending") // pending, running, completed, failed
+  resourceType String? // customers, orders, products
+  totalRecords Int?
+  processedRecords Int @default(0)
+  errorCount  Int      @default(0)
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  error       String?
+  metadata    String?  // JSON string of additional job metadata
+
+  @@map("sync_jobs")
+}
