@@ -124,3 +124,7 @@ shopify-insights-service/
 - Mock Shopify API responses for demo
 - Firebase project configured for authentication
 - PostgreSQL database available for development
+- 
+
+<img width="1477" height="646" alt="image" src="https://github.com/user-attachments/assets/b4126c86-ebe6-4bfd-aa5a-d74d2f171ef8" />
+
