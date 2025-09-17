@@ -1,3 +1,5 @@
+Site is live - https://xeno-cxli-p73g11ipu-sanskar325s-projects.vercel.app/
+
 # Shopify Data Ingestion and Insights Service
 
 A multi-tenant service for ingesting Shopify store data and providing business insights through interactive dashboards.
