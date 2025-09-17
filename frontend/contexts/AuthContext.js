@@ -8,9 +8,7 @@ import {
   updatePassword,
   reauthenticateWithCredential,
   EmailAuthProvider,
-  deleteUser,
-  sendEmailVerification,
-  sendPasswordResetEmail
+  deleteUser
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { apiService } from '../lib/api';
@@ -26,14 +24,8 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     try {
-      const unsubscribe = onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          // Reload user to get latest email verification status
-          await user.reload();
-          setUser(auth.currentUser);
-        } else {
-          setUser(null);
-        }
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setUser(user);
         setLoading(false);
         setFirebaseError(null);
       });
@@ -73,9 +65,6 @@ export const AuthProvider = ({ children }) => {
       await updateProfile(result.user, {
         displayName: name
       });
-      
-      // Send email verification
-      await sendEmailVerification(result.user);
       
       // Generate JWT token for backend authentication
       const firebaseToken = await result.user.getIdToken();
@@ -145,20 +134,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const sendVerificationEmail = async () => {
-    if (auth.currentUser && !auth.currentUser.emailVerified) {
-      await sendEmailVerification(auth.currentUser);
-    }
-  };
-
-  const sendPasswordReset = async (email) => {
-    await sendPasswordResetEmail(auth, email);
-  };
-
-  const isEmailVerified = () => {
-    return auth.currentUser ? auth.currentUser.emailVerified : false;
-  };
-
   const value = {
     user,
     login,
@@ -168,10 +143,7 @@ export const AuthProvider = ({ children }) => {
     firebaseError,
     updateUserProfile,
     updateUserPassword,
-    deleteAccount,
-    sendVerificationEmail,
-    sendPasswordReset,
-    isEmailVerified
+    deleteAccount
   };
 
   return (

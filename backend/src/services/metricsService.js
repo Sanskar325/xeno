@@ -8,7 +8,7 @@ const getMetrics = async ({ tenantId, storeId, dateFrom, dateTo }) => {
     };
 
     if (storeId) {
-      whereClause.storeId = storeId;
+      // Filtering by storeId is not supported in the current schema; scoped by tenant only.
     }
 
     if (dateFrom || dateTo) {
@@ -89,9 +89,7 @@ const getMetrics = async ({ tenantId, storeId, dateFrom, dateTo }) => {
     // Get returning customers (customers with more than 1 order)
     const returningCustomers = await prisma.customer.count({
       where: {
-        store: {
-          tenantId
-        },
+        tenantId,
         ordersCount: {
           gt: 1
         }

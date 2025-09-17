@@ -37,19 +37,13 @@ router.get('/products', authenticateToken, async (req, res) => {
     const whereClause = { tenantId: req.user.tenantId };
 
     if (storeId) {
-      whereClause.storeId = storeId;
+      // Filtering by storeId is not supported in the current schema; scoped by tenant only.
     }
 
     const products = await prisma.product.findMany({
       where: whereClause,
       include: {
-        variants: true,
-        store: {
-          select: {
-            name: true,
-            domain: true
-          }
-        }
+        variants: true
       },
       orderBy: {
         createdAt: 'desc'
@@ -87,7 +81,7 @@ router.get('/orders', authenticateToken, async (req, res) => {
     const whereClause = { tenantId: req.user.tenantId };
 
     if (storeId) {
-      whereClause.storeId = storeId;
+      // Filtering by storeId is not supported in the current schema; scoped by tenant only.
     }
 
     if (status) {
@@ -113,12 +107,6 @@ router.get('/orders', authenticateToken, async (req, res) => {
             }
           }
         },
-        store: {
-          select: {
-            name: true,
-            domain: true
-          }
-        }
       },
       orderBy: {
         createdAt: 'desc'
@@ -156,19 +144,11 @@ router.get('/customers', authenticateToken, async (req, res) => {
     const whereClause = { tenantId: req.user.tenantId };
 
     if (storeId) {
-      whereClause.storeId = storeId;
+      // Filtering by storeId is not supported in the current schema; scoped by tenant only.
     }
 
     const customers = await prisma.customer.findMany({
       where: whereClause,
-      include: {
-        store: {
-          select: {
-            name: true,
-            domain: true
-          }
-        }
-      },
       orderBy: {
         totalSpent: 'desc'
       },

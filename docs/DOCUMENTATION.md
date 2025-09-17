@@ -127,3 +127,5 @@ Compliance
 4. Save the domain once: `localStorage.setItem('shop_domain', 'your-store.myshopify.com')` and refresh the dashboard.
 
 
+
+
